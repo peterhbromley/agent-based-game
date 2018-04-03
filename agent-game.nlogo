@@ -6,9 +6,11 @@ patches-own [ wall-group path-to-end? ]
 breed [monsters monster]
 monsters-own [ last-visited ]
 breed [heroes hero]
+monsters-own [ health]
 
 globals[
   player         ;the players avatar
+  pdam           ;player damage
   start-patch
   end-patch
 ]
@@ -19,15 +21,7 @@ to setup
   init-start-and-end
   create-walls
   create-player
-
-
-  ask one-of patches with [wall-group = -1] [
-    sprout-monsters 1 [
-      set shape "arrow"
-      set color red
-      set last-visited patch-here
-    ]
-  ]
+  create-monster
   reset-ticks
 end
 
@@ -89,14 +83,25 @@ end
 ;Creates a player on a random patch that is not a wall
 to create-player
   ask start-patch [
-  sprout-heroes 1[
-    set player self
-    set shape "person"
-    set color blue
-  ]
+    sprout-heroes 1[
+      set player self
+      set shape "person"
+      set color blue
+    ]
   ]
 end
 
+;Observer Context
+;creates monsters in random locations, not too close to the player
+to create-monster
+  ask one-of patches with [distance player > 15 and pcolor != gray] [
+    sprout-monsters 1[
+      set shape "fish"
+      set color blue
+      set health 5
+    ]
+  ]
+end
 ;;Movement
 
 ;;checks if there are any patches directly above it that are not walls
@@ -107,7 +112,7 @@ to move-up
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp + 1 and pxcor = temp2 and pcolor != gray] [
-    set ycor pycor + 1
+      move-player patch xcor (ycor + 1)
     ]
   ]
 end
@@ -117,7 +122,7 @@ to move-down
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp - 1 and pxcor = temp2 and pcolor != gray] [
-    set ycor pycor - 1
+      move-player patch xcor (ycor - 1)
     ]
   ]
 end
@@ -127,7 +132,7 @@ to move-left
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp and pxcor = temp2 - 1 and pcolor != gray] [
-    set xcor pxcor - 1
+      move-player patch (xcor - 1) ycor
     ]
   ]
 end
@@ -137,10 +142,11 @@ to move-right
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp and pxcor = temp2 + 1 and pcolor != gray] [
-    set xcor pxcor + 1
+      move-player patch (xcor + 1) ycor
     ]
   ]
 end
+
 
 
 to move-monsters
@@ -161,6 +167,21 @@ to move
     move-monsters
   ]
   tick
+=======
+;Player Context
+;moves player to a patch, or initiates combat
+to move-player [ movepatch ]
+  ifelse any? monsters-on movepatch [
+    ask one-of monsters-on movepatch [
+      set color red
+      set health health - pdam
+      wait 0.1
+      set color blue
+    ]
+  ]
+  [
+    move-to movepatch
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
