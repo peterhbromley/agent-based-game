@@ -147,17 +147,16 @@ to move-monsters
   ask monsters [
     let last-patch last-visited
     let valid-neighbors neighbors4 with [wall-group = -1 and self != last-patch]
-    let next-step last-patch
-    if any? valid-neighbors [
-      set next-step min-one-of valid-neighbors [distance player]
-    ]
+    ifelse any? valid-neighbors [
+      let next-step min-one-of valid-neighbors [distance player]
+    ] [ let next-step l
     set last-visited patch-here
     move-to next-step
   ]
 end
 
 to move
-  if ticks mod 100000 = 0 [
+  if ticks mod 10000 = 0 [
     move-monsters
   ]
   tick
