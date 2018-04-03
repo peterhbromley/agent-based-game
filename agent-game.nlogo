@@ -2,24 +2,27 @@
 ;Peter Bromley & Robert Lichenstein
 
 
-patches-own [ wall-group ]
+patches-own [ wall-group path-to-end? ]
 breed [monsters monster]
 breed [heroes hero]
 
 globals[
   player         ;the players avatar
-
+  start-patch
+  end-patch
 ]
 to setup
   ca
+  ask patches [ set wall-group -1 set pcolor white ]
+  ask patches [ set path-to-end? false ]
+  init-start-and-end
   create-walls
   create-player
 end
 
 
 to create-walls
-  ask patches [ set wall-group -1 set pcolor white ]
-  let num-wall-groups 10
+  let num-wall-groups 15
   let num-walls-min 10
   let num-walls-max 20
   while [num-wall-groups > 0] [
@@ -40,13 +43,41 @@ to create-wall-group [ num-walls wg ]
 end
 
 to-report valid-wall-patch
-  report (wall-group = -1) and (any? neighbors4 with [ wall-group = -1 ])
+  report (wall-group = -1) and (any? neighbors4 with [ wall-group = -1 ]) and (path-to-end? = false)
+end
+
+to init-start-and-end
+  set start-patch one-of patches with [pxcor = min-pxcor]
+  ask start-patch [set pcolor green]
+  set end-patch one-of patches with [pxcor = max-pxcor]
+  ask end-patch [set pcolor red]
+  let iter-patch start-patch
+  while [iter-patch != end-patch] [
+    let ip-xcor [pxcor] of iter-patch
+    let ip-ycor [pycor] of iter-patch
+    ask iter-patch [set path-to-end? true]
+    set iter-patch select-patch ip-xcor ip-ycor
+  ]
+  ask end-patch [set path-to-end? true]
+end
+
+to-report select-patch [ip-xcor ip-ycor]
+  if ip-ycor = [pycor] of end-patch [ report patch (ip-xcor + 1) ip-ycor ]
+  let move random 2
+  if ip-ycor < [pycor] of end-patch [
+    if ip-xcor = max-pxcor [ report patch ip-xcor (ip-ycor + 1) ]
+    ifelse move = 0 [ report patch (ip-xcor + 1) ip-ycor ]
+                    [ report patch ip-xcor (ip-ycor + 1) ]
+  ]
+  if ip-xcor = max-pxcor [ report patch ip-xcor (ip-ycor - 1) ]
+  ifelse move = 0 [report patch (ip-xcor + 1) ip-ycor]
+                  [report patch ip-xcor (ip-ycor - 1)]
 end
 
 ;Observer Context
 ;Creates a player on a random patch that is not a wall
 to create-player
-  ask one-of patches with [ pcolor != gray ] [
+  ask start-patch [
   sprout-heroes 1[
     set player self
     set shape "person"
