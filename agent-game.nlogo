@@ -1,9 +1,19 @@
+;Bromley's Tower ( a dungeon crawling game)
+;Peter Bromley & Robert Lichenstein
+
+
 patches-own [ wall-group ]
+breed [monsters monster]
+breed [heroes hero]
 
+globals[
+  player         ;the players avatar
 
+]
 to setup
   ca
   create-walls
+  create-player
 end
 
 
@@ -19,7 +29,6 @@ to create-walls
   ]
 end
 
-
 to create-wall-group [ num-walls wg ]
   set pcolor gray
   set wall-group wg
@@ -32,6 +41,63 @@ end
 
 to-report valid-wall-patch
   report (wall-group = -1) and (any? neighbors4 with [ wall-group = -1 ])
+end
+
+;Observer Context
+;Creates a player on a random patch that is not a wall
+to create-player
+  ask one-of patches with [ pcolor != gray ] [
+  sprout-heroes 1[
+    set player self
+    set shape "person"
+    set color blue
+  ]
+  ]
+end
+
+;;Movement
+
+;;checks if there are any patches directly above it that are not walls
+;; if so we can execute our movement
+;; plans to execute monster movement on each move-call
+to move-up
+  ask player[
+    let temp ycor
+    let temp2 xcor
+    if any? patches with [pycor = temp + 1 and pxcor = temp2 and pcolor != gray] [
+    set ycor pycor + 1
+    ]
+  ]
+end
+
+to move-down
+  ask player[
+    let temp ycor
+    let temp2 xcor
+    if any? patches with [pycor = temp - 1 and pxcor = temp2 and pcolor != gray] [
+    set ycor pycor - 1
+    ]
+  ]
+end
+
+to move-left
+  ask player[
+    let temp ycor
+    let temp2 xcor
+    if any? patches with [pycor = temp and pxcor = temp2 - 1 and pcolor != gray] [
+    set xcor pxcor - 1
+    ]
+  ]
+end
+
+to move-right
+  ask player[
+    let temp ycor
+    let temp2 xcor
+    if any? patches with [pycor = temp and pxcor = temp2 + 1 and pcolor != gray] [
+    set xcor pxcor + 1
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -74,6 +140,74 @@ T
 OBSERVER
 NIL
 NIL
+NIL
+NIL
+1
+
+BUTTON
+56
+214
+111
+247
+up
+move-up
+NIL
+1
+T
+OBSERVER
+NIL
+W
+NIL
+NIL
+1
+
+BUTTON
+56
+258
+111
+293
+down
+move-down
+NIL
+1
+T
+OBSERVER
+NIL
+S
+NIL
+NIL
+1
+
+BUTTON
+112
+234
+167
+268
+right
+move-right\n
+NIL
+1
+T
+OBSERVER
+NIL
+D
+NIL
+NIL
+1
+
+BUTTON
+-1
+234
+54
+267
+left
+move-left
+NIL
+1
+T
+OBSERVER
+NIL
+A
 NIL
 NIL
 1
