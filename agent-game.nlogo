@@ -5,24 +5,36 @@
 patches-own [ wall-group path-to-end? ]
 breed [monsters monster]
 breed [heroes hero]
+breed [bolts bolt]
 monsters-own [ health]
 
 globals[
   player         ;the players avatar
-  pdam           ;player damage
+  strength       ;the melee damage skill
+  constitution      ;player health
+  vision           ; how much the player can see
+  magic    ; ranged magic damage damage
+  skillpoints    ;the players skill points to be allocated
   start-patch
   end-patch
+  level
 ]
 to setup
   ca
   ask patches [ set wall-group -1 set pcolor white ]
   ask patches [ set path-to-end? false ]
+  init-globals
   init-start-and-end
   create-walls
   create-player
   create-monster
 end
 
+to init-globals
+  set skillpoints 5 + skillpoints
+  set level level + 1
+
+end
 
 to create-walls
   let num-wall-groups 15
@@ -145,19 +157,87 @@ to move-right
   ]
 end
 
+
 ;Player Context
 ;moves player to a patch, or initiates combat
 to move-player [ movepatch ]
   ifelse any? monsters-on movepatch [
     ask one-of monsters-on movepatch [
       set color red
-      set health health - pdam
+      set health health - (strength + 1)
+      if health < 0 [die]
       wait 0.1
       set color blue
     ]
   ]
   [
     move-to movepatch
+  ]
+end
+
+to move-check
+  if [patch-here] of player = end-patch[
+    newround
+  ]
+
+end
+
+to newround
+  clear-patches
+  clear-turtles
+  clear-ticks
+  ask patches [ set wall-group -1 set pcolor white ]
+  ask patches [ set path-to-end? false ]
+  init-globals
+  init-start-and-end
+  create-walls
+  create-player
+  create-monster
+  user-message ("Welcome to the next round. Please allocate your skill points.")
+end
+
+to skillup [ skill ]
+  if skillpoints > 0 [
+    if "strength" = skill [
+      set strength strength + 1
+    ]
+    if "magic" = skill [
+      set magic magic + 1
+    ]
+    if "constitution" = skill [
+      set constitution constitution + 1
+    ]
+    if "vision" = skill [
+      set vision vision + 1
+    ]
+    set skillpoints skillpoints - 1
+  ]
+end
+
+to magic-blast
+  ask player[
+    ask patch-here[
+      sprout-bolts 1[
+        set heading 0
+        set shape "sun"
+        set color yellow - .7
+      ]
+      sprout-bolts 1[
+        set heading 90
+        set shape "sun"
+        set color yellow - .7
+      ]
+      sprout-bolts 1[
+        set heading 180
+        set shape "sun"
+        set color yellow - .7
+      ]
+      sprout-bolts 1[
+        set heading 270
+        set shape "sun"
+        set color yellow - .7
+      ]
+    ]
   ]
 
 end
@@ -190,10 +270,10 @@ ticks
 30.0
 
 BUTTON
-91
-115
-157
-148
+68
+20
+134
+53
 NIL
 setup
 NIL
@@ -207,12 +287,12 @@ NIL
 1
 
 BUTTON
-56
-214
-111
-247
+75
+82
+130
+115
 up
-move-up
+move-up\nmove-check\n
 NIL
 1
 T
@@ -224,12 +304,12 @@ NIL
 1
 
 BUTTON
-56
-258
-111
-293
+75
+126
+130
+161
 down
-move-down
+move-down\nmove-check
 NIL
 1
 T
@@ -241,12 +321,12 @@ NIL
 1
 
 BUTTON
-112
-234
-167
-268
+131
+102
+186
+136
 right
-move-right\n
+move-right\nmove-check
 NIL
 1
 T
@@ -258,18 +338,179 @@ NIL
 1
 
 BUTTON
--1
-234
-54
-267
+18
+102
+73
+135
 left
-move-left
+move-left\nmove-check
 NIL
 1
 T
 OBSERVER
 NIL
 A
+NIL
+NIL
+1
+
+MONITOR
+668
+48
+725
+93
+NIL
+level
+17
+1
+11
+
+TEXTBOX
+673
+107
+776
+125
+Skill point Allocations
+11
+0.0
+1
+
+MONITOR
+729
+190
+809
+235
+Strength
+strength
+17
+1
+11
+
+MONITOR
+729
+242
+809
+287
+Magic
+magic
+17
+1
+11
+
+MONITOR
+729
+298
+809
+343
+Constitution
+constitution
+17
+1
+11
+
+MONITOR
+729
+353
+809
+398
+Vision
+vision
+17
+1
+11
+
+MONITOR
+656
+136
+762
+181
+Points Remaining
+skillpoints
+17
+1
+11
+
+BUTTON
+658
+197
+721
+230
+↑
+skillup \"strength\"\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+658
+246
+721
+279
+↑
+skillup \"magic\"\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+659
+298
+722
+331
+↑
+skillup \"constitution\"
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+659
+353
+722
+386
+↑
+skillup \"vision\"
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+87
+237
+173
+270
+Lightning!
+magic-blast\nask bolts [ fd 1]
+NIL
+1
+T
+OBSERVER
+NIL
+K
 NIL
 NIL
 1
@@ -467,6 +708,11 @@ false
 Polygon -7500403 true true 150 210 135 195 120 210 60 210 30 195 60 180 60 165 15 135 30 120 15 105 40 104 45 90 60 90 90 105 105 120 120 120 105 60 120 60 135 30 150 15 165 30 180 60 195 60 180 120 195 120 210 105 240 90 255 90 263 104 285 105 270 120 285 135 240 165 240 180 270 195 240 210 180 210 165 195
 Polygon -7500403 true true 135 195 135 240 120 255 105 255 105 285 135 285 165 240 165 195
 
+lightning
+false
+0
+Polygon -7500403 true true 120 135 90 195 135 195 105 300 225 165 180 165 210 105 165 105 195 0 75 135
+
 line
 true
 0
@@ -534,6 +780,19 @@ star
 false
 0
 Polygon -7500403 true true 151 1 185 108 298 108 207 175 242 282 151 216 59 282 94 175 3 108 116 108
+
+sun
+false
+0
+Circle -7500403 true true 75 75 150
+Polygon -7500403 true true 300 150 240 120 240 180
+Polygon -7500403 true true 150 0 120 60 180 60
+Polygon -7500403 true true 150 300 120 240 180 240
+Polygon -7500403 true true 0 150 60 120 60 180
+Polygon -7500403 true true 60 195 105 240 45 255
+Polygon -7500403 true true 60 105 105 60 45 45
+Polygon -7500403 true true 195 60 240 105 255 45
+Polygon -7500403 true true 240 195 195 240 255 255
 
 target
 false
