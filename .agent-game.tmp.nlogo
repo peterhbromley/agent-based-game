@@ -4,11 +4,15 @@
 
 patches-own [ wall-group path-to-end? ]
 breed [monsters monster]
-monsters-own [ last-visited ]
 breed [heroes hero]
+monsters-own [ last-visited health class current-path ]
+heroes-own [ health ]
 
 globals[
   player         ;the players avatar
+  pdam           ;player damage
+  mmdam          ;monster melee damage
+  msdam          ;monster bullet damage
   start-patch
   end-patch
 ]
@@ -19,15 +23,7 @@ to setup
   init-start-and-end
   create-walls
   create-player
-
-
-  ask one-of patches with [wall-group = -1] [
-    sprout-monsters 1 [
-      set shape "arrow"
-      set color red
-      set last-visited patch-here
-    ]
-  ]
+  create-mons
   reset-ticks
 end
 
@@ -89,14 +85,35 @@ end
 ;Creates a player on a random patch that is not a wall
 to create-player
   ask start-patch [
-  sprout-heroes 1[
-    set player self
-    set shape "person"
-    set color blue
-  ]
+    sprout-heroes 1[
+      set player self
+      set shape "person"
+      set color blue
+    ]
   ]
 end
 
+;Observer Context
+;creates monsters in random locations, not too close to the player
+to create-mons
+  ask one-of patches with [distance player > 15 and pcolor != gray] [
+    sprout-monsters 1[
+      set shape "fish"
+      set color blue
+      set health 5
+      set class "runner"
+      set current-path []
+    ]
+  ]
+  ask one-of patches with [distance player > 15 and pcolor != gray] [
+    sprout-monsters 1[
+      set shape "plant"
+      set color orange
+      set health 5
+      set class "shooter"
+    ]
+  ]
+end
 ;;Movement
 
 ;;checks if there are any patches directly above it that are not walls
@@ -107,7 +124,7 @@ to move-up
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp + 1 and pxcor = temp2 and pcolor != gray] [
-    set ycor pycor + 1
+      move-player patch xcor (ycor + 1)
     ]
   ]
 end
@@ -117,7 +134,7 @@ to move-down
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp - 1 and pxcor = temp2 and pcolor != gray] [
-    set ycor pycor - 1
+      move-player patch xcor (ycor - 1)
     ]
   ]
 end
@@ -127,7 +144,7 @@ to move-left
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp and pxcor = temp2 - 1 and pcolor != gray] [
-    set xcor pxcor - 1
+      move-player patch (xcor - 1) ycor
     ]
   ]
 end
@@ -137,30 +154,74 @@ to move-right
     let temp ycor
     let temp2 xcor
     if any? patches with [pycor = temp and pxcor = temp2 + 1 and pcolor != gray] [
-    set xcor pxcor + 1
+      move-player patch (xcor + 1) ycor
     ]
   ]
 end
 
 
+
 to move-monsters
   ask monsters [
-    let last-patch last-visited
-    let valid-neighbors neighbors4 with [wall-group = -1 and self != last-patch]
-    ifelse any? valid-neighbors [
-      let next-step min-one-of valid-neighbors [distance player]
-    ] [ let next-step l
-    set last-visited patch-here
-    move-to next-step
+    ifelse any? heroes-on neighbors4 [
+      ask one-of heroes-on neighbors4 [
+        set color red
+        set health health - mmdam
+        wait 0.1
+        set color blue
+      ]
+    ] [
+      let step a-star-step
+      move-to step
+    ]
   ]
 end
 
+to runner-monster-mvmt
+end
+
+to-report a-star-step
+  ;let next-patch patch-here
+  ;while next-patch != end-patch [
+  ;  let valid-neighbors neighbors4 with [wall-group = -1 and not any? monsters-on self]
+  ;  set next-patch min-one-of valid-neighbors [distance player]
+  ;]
+
+  let last-patch last-visited
+  let valid-neighbors neighbors4 with [wall-group = -1 and self != last-patch and not any? monsters-on self]
+  ;let next-step patch-here
+  ;if any? valid-neighbors [
+  ;  set next-step min-one-of valid-neighbors [distance player]
+  ;]
+  ;set last-visited patch-here
+  ;report next-step
+end
+
+
 to move
-  if ticks mod 10000 = 0 [
+  if ticks mod 100000 = 0 [
     move-monsters
   ]
   tick
 end
+
+
+;Player Context
+;moves player to a patch, or initiates combat
+to move-player [ movepatch ]
+  ifelse any? monsters-on movepatch [
+    ask one-of monsters-on movepatch [
+      set color red
+      set health health - pdam
+      wait 0.1
+      set color blue
+    ]
+  ]
+  [
+    move-to movepatch
+  ]
+end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 210

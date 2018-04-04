@@ -4,13 +4,15 @@
 
 patches-own [ wall-group path-to-end? ]
 breed [monsters monster]
-monsters-own [ last-visited ]
 breed [heroes hero]
-monsters-own [ health]
+monsters-own [ last-visited health class current-path ]
+heroes-own [ health ]
 
 globals[
   player         ;the players avatar
   pdam           ;player damage
+  mmdam          ;monster melee damage
+  msdam          ;monster bullet damage
   start-patch
   end-patch
 ]
@@ -21,7 +23,7 @@ to setup
   init-start-and-end
   create-walls
   create-player
-  create-monster
+  create-mons
   reset-ticks
 end
 
@@ -93,12 +95,22 @@ end
 
 ;Observer Context
 ;creates monsters in random locations, not too close to the player
-to create-monster
+to create-mons
   ask one-of patches with [distance player > 15 and pcolor != gray] [
     sprout-monsters 1[
       set shape "fish"
       set color blue
       set health 5
+      set class "runner"
+      set current-path []
+    ]
+  ]
+  ask one-of patches with [distance player > 15 and pcolor != gray] [
+    sprout-monsters 1[
+      set shape "plant"
+      set color orange
+      set health 5
+      set class "shooter"
     ]
   ]
 end
@@ -151,23 +163,49 @@ end
 
 to move-monsters
   ask monsters [
-    let last-patch last-visited
-    let valid-neighbors neighbors4 with [wall-group = -1 and self != last-patch]
-    let next-step last-patch
-    if any? valid-neighbors [
-      set next-step min-one-of valid-neighbors [distance player]
+    ifelse any? heroes-on neighbors4 [
+      ask one-of heroes-on neighbors4 [
+        set color red
+        set health health - mmdam
+        wait 0.1
+        set color blue
+      ]
+    ] [
+      let step a-star-step
+      move-to step
     ]
-    set last-visited patch-here
-    move-to next-step
   ]
 end
+
+to runner-monster-mvmt
+end
+
+to-report a-star-step
+  ;let next-patch patch-here
+  ;while next-patch != end-patch [
+  ;  let valid-neighbors neighbors4 with [wall-group = -1 and not any? monsters-on self]
+  ;  set next-patch min-one-of valid-neighbors [distance player]
+  ;]
+
+  let last-patch last-visited
+  let valid-neighbors neighbors4 with [wall-group = -1 and self != last-patch and not any? monsters-on self]
+  let next-step patch-here
+  if any? valid-neighbors [
+    set next-step min-one-of valid-neighbors [distance player]
+  ]
+  set last-visited patch-here
+  report next-step
+end
+
 
 to move
   if ticks mod 100000 = 0 [
     move-monsters
   ]
   tick
-=======
+end
+
+
 ;Player Context
 ;moves player to a patch, or initiates combat
 to move-player [ movepatch ]
@@ -183,6 +221,7 @@ to move-player [ movepatch ]
     move-to movepatch
   ]
 end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
